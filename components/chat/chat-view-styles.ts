@@ -95,4 +95,6 @@ export const styles = StyleSheet.create({
   todoItemRow: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 40 },
   todoStatusIcon: { margin: 0 },
   todoTextWrap: { flex: 1 },
+  keyboardDismissRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 4, borderTopWidth: 1 },
+  keyboardDismissButton: { minHeight: 32 },
 });

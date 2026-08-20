@@ -1,7 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, View } from 'react-native';
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Button, Card, Snackbar, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -78,6 +78,22 @@ export function ChatView() {
   const [speakingMessageId, setSpeakingMessageId] = useState<string | undefined>(undefined);
   const [voiceFeedback, setVoiceFeedback] = useState<string | undefined>(undefined);
   const [sendFeedback, setSendFeedback] = useState<string | undefined>(undefined);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   const speechDraftPrefixRef = useRef('');
   const draftRef = useRef('');
   const attachmentsRef = useRef<{ uri: string; mime?: string; filename?: string }[]>([]);
@@ -337,44 +353,141 @@ export function ChatView() {
   }
 
   async function handleAttach() {
-    try {
-      const picker = await import('expo-document-picker');
-      const result = await picker.getDocumentAsync({
-        base64: Platform.OS === 'web',
-        multiple: true,
-        copyToCacheDirectory: true,
-      });
+    Alert.alert('Attach file or photo', 'Choose source', [
+      {
+        text: 'Photo Library',
+        onPress: () => {
+          void (async () => {
+            try {
+              const imagePicker = await import('expo-image-picker');
+              const perm = await imagePicker.requestMediaLibraryPermissionsAsync();
+              if (!perm.granted) {
+                setSendFeedback('Permission to access photo library is required.');
+                return;
+              }
+              const result = await imagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsMultipleSelection: true,
+                quality: 0.8,
+                base64: Platform.OS === 'web',
+              });
+              if (result.canceled || !result.assets?.length) return;
+              if (result.assets.some((asset) => typeof (asset as any).fileSize === 'number' && (asset as any).fileSize > 10 * 1024 * 1024)) {
+                setSendFeedback('File exceeds the 10 MB attachment limit.');
+                return;
+              }
+              setSendFeedback(undefined);
+              setAttachments((current) => {
+                const next = [...current];
+                result.assets.forEach((asset) => {
+                  const uri = asset.base64
+                    ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`
+                    : asset.uri;
+                  if (!next.some((attachment) => attachment.uri === uri)) {
+                    next.push({
+                      uri,
+                      mime: asset.mimeType || 'image/jpeg',
+                      filename: asset.fileName || asset.uri.split('/').pop() || 'photo.jpg',
+                    });
+                  }
+                });
+                return next;
+              });
+            } catch (error) {
+              setSendFeedback(error instanceof Error ? error.message : 'Could not attach photo.');
+            }
+          })();
+        },
+      },
+      {
+        text: 'Take Photo',
+        onPress: () => {
+          void (async () => {
+            try {
+              const imagePicker = await import('expo-image-picker');
+              const perm = await imagePicker.requestCameraPermissionsAsync();
+              if (!perm.granted) {
+                setSendFeedback('Permission to access camera is required.');
+                return;
+              }
+              const result = await imagePicker.launchCameraAsync({
+                quality: 0.8,
+                base64: Platform.OS === 'web',
+              });
+              if (result.canceled || !result.assets?.length) return;
+              const asset = result.assets[0];
+              if (typeof (asset as any).fileSize === 'number' && (asset as any).fileSize > 10 * 1024 * 1024) {
+                setSendFeedback('File exceeds the 10 MB attachment limit.');
+                return;
+              }
+              setSendFeedback(undefined);
+              setAttachments((current) => {
+                const next = [...current];
+                const uri = asset.base64
+                  ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`
+                  : asset.uri;
+                if (!next.some((attachment) => attachment.uri === uri)) {
+                  next.push({
+                    uri,
+                    mime: asset.mimeType || 'image/jpeg',
+                    filename: asset.fileName || 'camera-photo.jpg',
+                  });
+                }
+                return next;
+              });
+            } catch (error) {
+              setSendFeedback(error instanceof Error ? error.message : 'Could not take photo.');
+            }
+          })();
+        },
+      },
+      {
+        text: 'Document / File',
+        onPress: () => {
+          void (async () => {
+            try {
+              const picker = await import('expo-document-picker');
+              const result = await picker.getDocumentAsync({
+                base64: Platform.OS === 'web',
+                multiple: true,
+                copyToCacheDirectory: true,
+              });
 
-      if (result.canceled || !result.assets?.length) {
-        return;
-      }
-      if (result.assets.some((asset) => typeof asset.size === 'number' && asset.size > 10 * 1024 * 1024)) {
-        setSendFeedback('File exceeds the 10 MB attachment limit.');
-        return;
-      }
+              if (result.canceled || !result.assets?.length) {
+                return;
+              }
+              if (result.assets.some((asset) => typeof (asset as any).fileSize === 'number' && (asset as any).fileSize > 10 * 1024 * 1024)) {
+                setSendFeedback('File exceeds the 10 MB attachment limit.');
+                return;
+              }
 
-      setSendFeedback(undefined);
-      setAttachments((current) => {
-        const next = [...current];
+              setSendFeedback(undefined);
+              setAttachments((current) => {
+                const next = [...current];
 
-        result.assets.forEach((asset) => {
-          const uri = asset.base64
-            ? `data:${asset.mimeType || 'application/octet-stream'};base64,${asset.base64}`
-            : asset.uri;
-          if (!next.some((attachment) => attachment.uri === uri)) {
-            next.push({
-              uri,
-              mime: asset.mimeType || 'application/octet-stream',
-              filename: asset.name,
-            });
-          }
-        });
+                result.assets.forEach((asset) => {
+                  const uri = asset.base64
+                    ? `data:${asset.mimeType || 'application/octet-stream'};base64,${asset.base64}`
+                    : asset.uri;
+                  if (!next.some((attachment) => attachment.uri === uri)) {
+                    next.push({
+                      uri,
+                      mime: asset.mimeType || 'application/octet-stream',
+                      filename: asset.name,
+                    });
+                  }
+                });
 
-        return next;
-      });
-    } catch (error) {
-      setSendFeedback(error instanceof Error ? error.message : 'Could not attach that file.');
-    }
+                return next;
+              });
+            } catch (error) {
+              setSendFeedback(error instanceof Error ? error.message : 'Could not attach that file.');
+            }
+          })();
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   }
 
   async function handleNewSession() {
@@ -423,7 +536,7 @@ export function ChatView() {
       <KeyboardAvoidingView
         style={[styles.screen, { backgroundColor: palette.background }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}>
+        keyboardVerticalOffset={0}>
         <ChatHeader
           connectionStatus={connection.status}
           conversation={conversation}
@@ -521,6 +634,20 @@ export function ChatView() {
               </View>
             </Card.Content>
           </Card>
+        ) : null}
+
+        {isKeyboardVisible ? (
+          <View style={[styles.keyboardDismissRow, { backgroundColor: palette.surface, borderTopColor: palette.border }]}>
+            <Button
+              mode="text"
+              icon="chevron-down"
+              compact
+              onPress={() => Keyboard.dismiss()}
+              textColor={palette.tint}
+              style={styles.keyboardDismissButton}>
+              Hide keyboard to read chat
+            </Button>
+          </View>
         ) : null}
 
         <ChatComposer
