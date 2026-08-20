@@ -72,7 +72,7 @@ export function ChatComposer({
   visibleModels,
 }: ChatComposerProps) {
   const minInputHeight = 24;
-  const maxInputHeight = 110;
+  const maxInputHeight = 160;
   const hasComposerContent = Boolean(draft.trim()) || attachments.length > 0;
   const showOuterAction = showSendAction ? (hasComposerContent ? 'send' : 'attach') : 'stop';
   const outerActionIcon = showOuterAction === 'attach' ? 'plus' : showOuterAction;

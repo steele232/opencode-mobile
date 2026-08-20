@@ -68,7 +68,7 @@ export const styles = StyleSheet.create({
   // Keep input flexible but start very compact
   // Input text area: keep the text container small; inner padding provides the 4px top/bottom
   // Keep text vertically centered by default; multiline growth still allowed.
-  input: { flex: 1, minHeight: 24, maxHeight: 120, fontSize: 17, lineHeight: 22, marginHorizontal: -4, paddingVertical: 0, textAlignVertical: 'center' },
+  input: { flex: 1, minHeight: 24, maxHeight: 160, fontSize: 17, lineHeight: 22, marginHorizontal: -4, paddingVertical: 0, textAlignVertical: 'center' },
   inputContentCompact: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0, fontFamily: Fonts.sans },
   controlsRow: { flexDirection: 'row', flexWrap: 'nowrap', gap: 6, paddingHorizontal: 0, alignItems: 'center', width: '100%' },
   attachmentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 2 },

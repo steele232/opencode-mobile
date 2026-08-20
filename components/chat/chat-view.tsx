@@ -369,7 +369,6 @@ export function ChatView() {
                 mediaTypes: ['images'],
                 allowsMultipleSelection: true,
                 quality: 0.8,
-                base64: Platform.OS === 'web',
               });
               if (result.canceled || !result.assets?.length) return;
               if (result.assets.some((asset) => typeof (asset as any).fileSize === 'number' && (asset as any).fileSize > 10 * 1024 * 1024)) {
@@ -412,7 +411,6 @@ export function ChatView() {
               }
               const result = await imagePicker.launchCameraAsync({
                 quality: 0.8,
-                base64: Platform.OS === 'web',
               });
               if (result.canceled || !result.assets?.length) return;
               const asset = result.assets[0];
