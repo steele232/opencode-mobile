@@ -15,6 +15,12 @@ const releaseAndroidPackage = env('EXPO_ANDROID_PACKAGE') ?? defaultAndroidPacka
 const developmentAndroidPackage = env('EXPO_ANDROID_PACKAGE_DEV') ?? `${releaseAndroidPackage}.dev`;
 const androidPackage = isDevelopmentVariant ? developmentAndroidPackage : releaseAndroidPackage;
 
+const defaultIosBundleId = 'apps.getopencode.ios.renew';
+const releaseIosBundleId = env('EXPO_IOS_BUNDLE_ID') ?? defaultIosBundleId;
+const developmentIosBundleId = env('EXPO_IOS_BUNDLE_ID_DEV') ?? `${releaseIosBundleId}.dev`;
+const iosBundleId = isDevelopmentVariant ? developmentIosBundleId : releaseIosBundleId;
+const iosBuildNumber = env('EXPO_IOS_BUILD_NUMBER') ?? '1';
+
 const withCleartextTraffic = (config: ExpoConfig) => withAndroidManifest(config, (config) => {
   const application = config.modResults.manifest.application?.[0];
   if (application) application.$['android:usesCleartextTraffic'] = 'true';
@@ -50,10 +56,16 @@ const config: ExpoConfig = {
       NSAppTransportSecurity: {
         NSAllowsArbitraryLoads: true,
       },
+      ITSAppUsesNonExemptEncryption: false,
+      NSPhotoLibraryUsageDescription: 'Allow $(PRODUCT_NAME) to access your library to upload attachments to your workspace.',
     },
+    bundleIdentifier: iosBundleId,
+    buildNumber: iosBuildNumber,
   },
   plugins: [
     'expo-router',
+    'expo-font',
+    'expo-web-browser',
     'expo-notifications',
     'expo-background-task',
     [

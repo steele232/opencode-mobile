@@ -153,6 +153,7 @@ Notable values:
 - app variant controlled by `EXPO_APP_VARIANT`
 - E2E mode controlled by `EXPO_PUBLIC_E2E_MODE=1`
 - Android package name varies between production and development variants
+- `ios.bundleIdentifier` is currently a single fixed value (no dev/prod variant split yet); this is expected to be revisited alongside iOS signing setup
 - Expo Router, notifications, background task, speech recognition, and splash plugins are configured
 - React compiler and typed routes are enabled in Expo experiments
 
@@ -242,7 +243,31 @@ Android has the richest current support for:
 
 ### iOS
 
-iOS is supported by Expo/React Native setup, but some operational tooling in the repo is Android-focused. Voice and TTS behavior are still explicitly supported.
+iOS is supported by Expo/React Native setup, but some operational tooling in the repo is Android-focused (release build automation, deep links for battery/notification settings). Voice and TTS behavior are still explicitly supported. Android-only settings deep links (`expo-intent-launcher`) already fall back to `Linking.openSettings()` on iOS.
+
+#### Local iOS Simulator Development
+
+1. Install dependencies: `npm install`
+2. Generate the native iOS project (managed Expo continuous-native-generation; `ios/` is gitignored and regenerated on demand, mirroring `android/`):
+   ```
+   npx expo prebuild --platform ios
+   ```
+3. Boot the app in the Simulator:
+   ```
+   npm run ios
+   ```
+   First-time builds compile native CocoaPods/Swift/Obj-C code and can take several minutes with little terminal output before the first log line appears.
+4. Run `npx expo-doctor` after any dependency changes to confirm no SDK 54 version mismatches were introduced (all `expo-*` packages must match the versions expected by the installed `expo` release).
+
+#### Connecting to a Local `opencode serve` Backend
+
+- The default server URL (`http://127.0.0.1:4096`, see `lib/opencode/client.ts`) works unmodified in the iOS Simulator, since the Simulator shares the Mac's loopback network interface.
+- For a physical iOS device on the same Wi-Fi network, use the Mac's LAN IP (e.g. `http://192.168.x.x:4096`) instead of `127.0.0.1`, and ensure the backend binds to `0.0.0.0` plus the Mac firewall allows inbound connections on the server port.
+- For remote/on-the-go access from a physical device, a WireGuard-style mesh VPN (e.g. Tailscale) between the phone and the host machine is the recommended approach over exposing the port publicly. This is an operational/network concern only; no app code changes are required to support it since the server URL is user-configurable at runtime.
+
+#### iOS Release Build / Signing
+
+Bundle identifier, code signing, and TestFlight/App Store release automation (the iOS equivalent of `build:android` / `build:development:android`) are intentionally out of scope until a dedicated signing setup pass. `app.config.ts` currently has a placeholder `ios.bundleIdentifier` matching the Android package name.
 
 ## Operational Risks And Important Assumptions
 
